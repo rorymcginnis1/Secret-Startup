@@ -18,7 +18,7 @@ Step 4: Add a .env file in Secret-Startup
 
     (Replace your API key and Email Key)
 
-Step 5: Run npm install @babel/core @babel/node @babel/preset-env --save-dev inside Secret-Startup
+Step 5: Inside Secret-Startup run npm install @babel/core @babel/node @babel/preset-env --save-dev
 
 Step 6: Run node app.js
 
