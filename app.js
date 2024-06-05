@@ -149,7 +149,7 @@ async function getChatGPTResponse(prompt) {
     const configuration = new openai.Configuration({
       apiKey: process.env.OPENAI_API_KEY, // Ensure you set the API key in your environment
     });
-  
+    
     const openaiClient = new openai.OpenAIApi(configuration);
   
     try {
@@ -360,7 +360,7 @@ async function runSample() {
   try {
     // Obtain user credentials to use for the request
     const auth = await authenticate({
-      keyfilePath: path.join(__dirname, 'client_secret_303458804679-0ap9sqmj8kfsi7p588b14c313k50g599.apps.googleusercontent.com.json'),
+      keyfilePath: path.join(__dirname, process.env.EMAIL_KEY),
       scopes: 'https://www.googleapis.com/auth/gmail.readonly',
     });
     google.options({ auth });
@@ -448,7 +448,16 @@ async function runSample() {
     throw error;
   }
 }
-deleteJSON()
+
+function infoExists() {
+  return fs.existsSync('info.json');
+}
+
+if (infoExists()) {
+  deleteJSON();
+} else {
+  console.log("info.json does not exist. Skipping deletion.");
+}
 if (module === require.main) {
   runSample().catch(console.error);
 }
