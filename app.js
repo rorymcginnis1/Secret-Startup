@@ -17,7 +17,7 @@ const express = require('express');
 const app = express();
 const port = 3001;
 
-var total = 0
+var total = 0;
 
 var count =0;
 
