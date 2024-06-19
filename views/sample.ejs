@@ -12,11 +12,21 @@
 <body>
 
     <nav>
-        <form action="/logout" method="POST">
+        <form action="/logout_ofItems" method="POST">
             <button type="submit">Logout</button>
         </form>
-        <a href="/email_info" style="margin-left: 85%;">Add Items</a>
+        <a href="/go" style="margin-left: 85%;">Home</a>
     </nav>
+
+    <div class="center-button">
+        <p>
+            Press this button to add all of the contents below to your page.<br>
+            If you would not like to add an item you can remove it before<br>
+            hitting this button. If you would not like to add any of these<br>
+            items you can press home in the upper right corner.
+        </p>
+        <button onclick="location.href='/add_items_home'">Confirm</button>
+    </div>
 
     <div class="container">
         <h1>Items</h1>
