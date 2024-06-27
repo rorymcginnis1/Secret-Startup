@@ -4,9 +4,7 @@ Step 1: Git clone the document
 
 Step 2: Navigate into Secret-Startup
 
-Step 3: Copy and paste the email JSON file in Secret-Startup
-
-Step 4: Add a .env file in Secret-Startup
+Step 3: Add a .env file in Secret-Startup
 
     The .env file should look like this
 
@@ -18,9 +16,9 @@ Step 4: Add a .env file in Secret-Startup
 
     (Replace your API key and Email Key)
 
-Step 5: Inside Secret-Startup run npm install @babel/core @babel/node @babel/preset-env --save-dev
+Step 4: Inside Secret-Startup run npm install @babel/core @babel/node @babel/preset-env --save-dev
 
-Step 6: Run node app.js
+Step 5: Run node app.js
 
       
 
