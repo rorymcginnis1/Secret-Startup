@@ -17,6 +17,8 @@
     "@types/node": "^20.12.13",
     "axios": "^1.7.2",
     "body-parser": "^1.20.2",
+    "bunyan": "^1.8.15",
+    "crypto": "^1.0.1",
     "dotenv": "^16.4.5",
     "ejs": "^3.1.10",
     "express": "^4.19.2",
@@ -26,6 +28,9 @@
     "openai": "^4.47.2"
   },
   "devDependencies": {
+    "@babel/core": "^7.24.7",
+    "@babel/node": "^7.24.7",
+    "@babel/preset-env": "^7.24.7",
     "nodemon": "^3.1.2"
   }
 }
