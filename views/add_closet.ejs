@@ -37,18 +37,24 @@
 
     <div class="container">
         <h1>Items</h1>
-        <ul>
-            <% test.forEach((item, index) => { %>
-                <li>
-                    <strong>Name:</strong> <%= item[0] %><br>
-                    <strong>Quantity:</strong> <%= item[1] %><br>
-                    <strong>Price:</strong> <%= item[2] %><br>
-                    <img src="<%= item[3] %>" alt="<%= item[0] %>">
-                    <button class="delete-btn" onclick="removeItem(<%= index %>)">Delete</button>
-                </li>
-            <% }); %>
-        </ul>
+        <form id="itemForm">
+            <ul>
+                <% test.forEach((item, index) => { %>
+                    <li>
+                        <input type="checkbox" id="item_<%= index %>" value="<%= index %>">
+                        <label for="item_<%= index %>">
+                            <strong>Name:</strong> <%= item[0] %><br>
+                            <strong>Quantity:</strong> <%= item[1] %><br>
+                            <strong>Price:</strong> <%= item[2] %><br>
+                            <img src="<%= item[3] %>" alt="<%= item[0] %>">
+                        </label>
+                    </li>
+                <% }); %>
+            </ul>
+            <button type="button" onclick="sendSelectedItems()">Send Selected Items</button>
+        </form>
     </div>
+    
 
 </body>
 </html>

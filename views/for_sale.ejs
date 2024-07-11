@@ -27,7 +27,7 @@
             <a id="addClosetLink" href="#">Add New Closet</a>
           </div>
         <div class="dropdown">
-            <a href="#" class="dropbtn">Closets</a>
+            <a href="/" class="dropbtn">Closets</a>
             <div class="dropdown-content" id="dropdown-content">
               <!-- Dynamic content will be inserted here -->
             </div>
@@ -37,6 +37,9 @@
 
     <div class="container">
         <h1>Items</h1>
+        <form action="/add_to_closet" method="POST">
+            <button type="submit">Add to Closet</button>
+        </form>
         <ul>
             <% test.forEach((item, index) => { %>
                 <li>
@@ -49,6 +52,7 @@
             <% }); %>
         </ul>
     </div>
+
 
 </body>
 </html>
