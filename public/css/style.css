@@ -10,6 +10,36 @@ nav {
     overflow: hidden;
 }
 
+.dropdown {
+    position: relative;
+    display: inline-block;
+  }
+  .dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #f9f9f9;
+    min-width: 80px;
+    max-height: 200px; /* Set maximum height */
+    overflow-y: auto; /* Enable vertical scrolling */
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1;
+    left: 0; /* Adjust position as needed */
+    top: 100%; /* Adjust position as needed */
+  }
+  .dropdown-content a {
+    color: black;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+  }
+  .dropdown-content a:hover {
+    background-color: #f1f1f1;
+  }
+  .dropdown:hover .dropdown-content {
+    display: block;
+  }
+
+
 nav a {
     float: left;
     display: block;
@@ -105,3 +135,44 @@ nav a:hover {
     margin-bottom: 15px;
     border-radius: 5px;
 }
+
+.delete-button {
+    display: inline-block;
+    padding: 8px 16px;
+    background-color: #f44336; /* Red background color */
+    color: white; /* Text color */
+    text-decoration: none; /* Remove underline */
+    border: none; /* Remove border */
+    cursor: pointer; /* Add pointer cursor on hover */
+    border-radius: 4px; /* Rounded corners */
+    transition: background-color 0.3s ease; /* Smooth transition */
+  
+    /* Optional: Center align text and add margin */
+    text-align: center;
+    margin-left: 45%;
+  }
+  
+  .delete-button:hover {
+    background-color: #d32f2f; /* Darker red on hover */
+  }
+
+  .add-button {
+    display: inline-block;
+    padding: 8px 16px;
+    background-color: rgb(10, 10, 216); /* Red background color */
+    color: white; /* Text color */
+    text-decoration: none; /* Remove underline */
+    border: none; /* Remove border */
+    cursor: pointer; /* Add pointer cursor on hover */
+    border-radius: 4px; /* Rounded corners */
+    transition: background-color 0.3s ease; /* Smooth transition */
+  
+    /* Optional: Center align text and add margin */
+    text-align: center;
+
+  }
+  
+  .add-button:hover {
+    background-color: rgb(28, 28, 211); /* Darker red on hover */
+  }
+  

@@ -60,6 +60,9 @@ var image_length=0
 var strings =""
 
 var current_user="";
+var f_name = "main.json";
+var temp_f_name="";
+var count =0;
 
 
 const apiKey = process.env.OPENAI_API_KEY;
@@ -164,6 +167,31 @@ app.get('/home', (req, res) => {
     res.render('home');
   });
 
+
+  app.post('/add_closet', (req, res) => {
+    const { closetName } = req.body;
+    const currentUser = current_user; // Assuming current_user is defined somewhere in your application
+  
+    // Directory where user's closets are stored
+    const userDir = path.join(__dirname, 'user_info', currentUser);
+  
+    // File path for the closet JSON file
+    const filePath = path.join(userDir, `${closetName}.json`);
+  
+    // Example: Save closetName to a JSON file
+    console.log('Adding new closet:', closetName);
+    console.log('Current User:', currentUser);
+  
+  
+    fs.writeFileSync(filePath, '[]');
+    console.log(`Created new closet file: ${filePath}`);
+  
+    // Redirect to the index page after processing
+    res.redirect('/'); // Assuming 'index' is the route or file you want to redirect to
+  });
+
+
+
   //renders terms page
   app.get('/terms', (req, res) => {
     res.render('terms_of_service');
@@ -199,17 +227,19 @@ app.post('/createUser', (req, res) => {
       }
 
       creds.push({ email, password });
-      let name = email+".json";
+      let name = email;
       log.info(name)
-      
-      let folderPath = "user_info";
-      name = path.join(folderPath, name)
-      if (!fs.existsSync(name)) {
+      //good
+      let folderPath = "user_info/"+name;
+      if (!fs.existsSync(folderPath)) {
         try {
           if (!fs.existsSync(folderPath)) {
             fs.mkdirSync(folderPath);
           }
-          fs.writeFileSync(name, '[]');
+          let filePath = path.join(folderPath, 'main.json');
+          fs.writeFileSync(filePath, '[]');
+          filePath = path.join(folderPath, 'for sale.json');
+          fs.writeFileSync(filePath, '[]');
           log.info(name, ' created successfully.');
         } catch (error) {
           console.error('Error creating ', name, " ", error);
@@ -255,6 +285,9 @@ app.post('/login', (req, res) => {
 
           if (user) {
               current_user = user.email;
+              f_name="main.json"
+              var fPath = 'user_info/'+current_user;
+              count = getMaxItemCount(fPath,f_name)
               res.redirect('/')
           } else {
               res.redirect("/invalid_login");
@@ -269,9 +302,12 @@ app.post('/login', (req, res) => {
 
 // Read the JSON file for each request and update current user
 app.use((req, res, next) => {
-  let name=current_user+".json";
-  log.info(name)
-      const filePath = path.join(__dirname, 'user_info', name);
+  //good
+  let name = f_name;
+  let userDir = path.join(__dirname, 'user_info', current_user);
+  let filePath = path.join(userDir, name);
+
+  log.info(filePath);
 
       fs.readFile(filePath, 'utf8', (err, data) => {
         if (err) {
@@ -286,33 +322,62 @@ app.use((req, res, next) => {
 
 // renders the home page
 app.get('/', (req, res) => {
-    res.render('index', { test: req.test });
+  console.log(f_name)
+  console.log(temp_f_name)
+    if(f_name=="main.json" && temp_f_name!=""){
+      res.render('add_closet', { test: req.test });
+    }
+    else if(f_name=="temp.json"){
+      res.render('add_closet', { test: req.test });
+    }
+    else if(f_name=="main.json"|| f_name=="pending.json"){
+      res.render('index', { test: req.test });
+    }
+    else if(f_name=="for sale.json"){
+      res.render('for_sale', { test: req.test });
+    }
+    else{
+      res.render('closets', { test: req.test });
+    }
 });
 
 //renders teh sample page
 app.get('/sample', (req, res) => {
+    f_name="pending.json"
     res.render('sample');
 });
 
 
 // renders the add items page
 app.get('/add_items', (req, res) => {
+    f_name="pending.json"
     res.render('add_items');
   });
 
+app.post('/add_to_closet', (req,res)=>{
+  create_temp();
+  temp_f_name=f_name
+  f_name="temp.json"
+  res.redirect('/');
+});
+
+app.get ('/load', (req,res)=>{
+  res.redirect('/')
+})
+
+
+
 //adds the items from sample.json to your home page and renders home page
 app.get('/add_items_home', (req, res, next) => {
-    if (current_user.length > 7) {
-        current_user = current_user.slice(0, -7);
-    } else {
-        current_user = ""; 
-    }
+    f_name="pending.json"
+
+
+    //maybe
     log.info("line");
     log.info(current_user)
 
-    let actualPath = current_user+".json"
-    let pendingPath = current_user+"pending.json"
-    current_user+="pending"
+    let actualPath = "/"+current_user+"/main.json"
+    let pendingPath = "/"+current_user+"/pending.json"
     const spendingPath = path.join(__dirname, 'user_info', pendingPath);
     const sPath = path.join(__dirname, 'user_info', actualPath);
 
@@ -350,9 +415,11 @@ app.get('/add_items_home', (req, res, next) => {
 
   //renders your home page from the populating page
     app.get('/go', (req, res) => {
+      f_name="main.json"
       log.info("here")
       log.info(current_user)
-        var currentJSON = "user_info/"+current_user+".json";
+      //good
+        var currentJSON = "user_info/"+current_user+"/pending.json";
 
         try {
             fs.unlinkSync(currentJSON);
@@ -361,37 +428,112 @@ app.get('/add_items_home', (req, res, next) => {
         console.error('Error deleting info.json:', error);
         }
 
-        if (current_user.length > 7) {
-            current_user = current_user.slice(0, -7);
-        } else {
-            current_user = "";
-        }
+
         log.info(current_user)
 
         res.redirect('/');
     });
 
+    app.post('/process_selected_items', (req, res) => {
+      const { selectedItems } = req.body;
+      f_name = temp_f_name;
+      temp_f_name = "";
+  
+      console.log('Selected indices:', selectedItems);
+  
+      // Assuming f_name and current_user are defined elsewhere in your application
+      const mainFilePath = path.join(__dirname, 'user_info', current_user, "main.json");
+      let mainData;
+      
+
+      try {
+          const data = fs.readFileSync(mainFilePath, 'utf8');
+          mainData = JSON.parse(data);
+          console.log("mainer");
+          console.log(mainData);
+      } catch (err) {
+          console.error('Error reading or parsing main.json:', err);
+          return res.status(500).json({ success: false, message: 'Failed to read or parse main.json' });
+      }
+      console.log("mainer")
+      console.log(mainData)
+  
+          // Filter selected items based on indices
+          const itemsToAdd = selectedItems.map(index => mainData[index]);
+
+
+  
+          // Append selected items to f_name
+          const f_nameFilePath = path.join(__dirname, 'user_info', current_user, f_name);
+          fs.readFile(f_nameFilePath, 'utf8', (err, f_data) => {
+              if (err) {
+                  console.error('Error reading f_name:', err);
+                  return res.status(500).json({ success: false, message: 'Failed to read f_name' });
+              }
+  
+              let f_nameData;
+              try {
+                  f_nameData = JSON.parse(f_data);
+              } catch (parseError) {
+                  console.error('Error parsing f_name:', parseError);
+                  return res.status(500).json({ success: false, message: 'Failed to parse f_name' });
+              }
+  
+              // Add selected items to f_nameData array
+              itemsToAdd.forEach(item => {
+                  f_nameData.push(item);
+              });
+              console.log("items")
+              console.log(f_nameData)
+  
+              // Write updated data back to f_name
+              fs.writeFile(f_nameFilePath, JSON.stringify(f_nameData, null, 2), 'utf8', (err) => {
+                  if (err) {
+                      console.error('Error writing to f_name:', err);
+                      return res.status(500).json({ success: false, message: 'Failed to write to f_name' });
+                  }
+                  console.log('Selected items added to f_name');
+                  res.redirect('/');
+              });
+          });
+      
+  });
+  
+  
+
   //populates sample.json and redirects to /pending and displays the populated info
   app.get('/populate', async (req, res, next) => {
-        let name=current_user+"pending.json";
+    f_name="pending.json"
+        //maybe
+        let name="/"+current_user+"/pending.json";
         const fPath = path.join(__dirname, 'sample.json');
         log.info("P")
         fs.readFile('sample.json', (err, data) => {
           if (err) {
-              console.error('Error reading creds.json:', err);
+              console.error('Error reading sample.json:', err);
               return res.status(500).send({ message: 'Internal Server Error 3' });
           }
-          log.info("P")
+      
           try {
-              const creds = JSON.parse(data);
+              const jsonData = JSON.parse(data);
+      
+              // Iterate through each array in jsonData and add an element
+              jsonData.forEach(array => {
+                  const newItem = count + 1; // Generate new item based on count
+                  array.push(newItem);
+                  count++; // Add newItem to the end of the array
+              });
+      
+              // Increment count after adding elements to arrays
+              
+      
               const targetFilePath = path.join(__dirname, 'user_info', name);
-              log.info(name);
-              fs.writeFile(targetFilePath, JSON.stringify(creds, null, 2), 'utf8', (err) => {
-                if (err) {
-                    return res.status(500).json({ success: false, message: 'Failed to write file' });
-                }
-                res.redirect('/pending');
-            });
+              fs.writeFile(targetFilePath, JSON.stringify(jsonData, null, 2), 'utf8', (err) => {
+                  if (err) {
+                      return res.status(500).json({ success: false, message: 'Failed to write file' });
+                  }
+                  res.redirect('/pending');
+              });
               
           } catch (error) {
             res.redirect('/no_items')
@@ -405,19 +547,31 @@ app.get('/add_items_home', (req, res, next) => {
     res.render('no_items'); 
 
 });
+
+app.get('/for_sale', (req, res, next) => {
+
+  res.render('for_sale'); 
+
+});
   
   // renders page with items waiting for you to add them to your home page
   app.get('/pending', (req, res, next) => {
-    let name = `${current_user}pending.json`;
-    log.info(name);
-    const filePath = path.join(__dirname, 'user_info', name);
+
+    //good
+    f_name = "pending.json"
+    console.log("pending")
+    console.log(f_name)
+    let name = "pending.json";
+    let userDir = path.join(__dirname, 'user_info', current_user);
+    let filePath = path.join(userDir, name);
+  
+    log.info(filePath);
 
     fs.readFile(filePath, 'utf8', (err, data) => {
         if (err) {
             return next(err);
         }
         const fileData = JSON.parse(data); 
-        current_user+="pending"
         res.render('sample', { test: fileData });
     });
 });
@@ -427,21 +581,61 @@ app.get('/add_items_home', (req, res, next) => {
 
     res.redirect('/add_items');
   });
+
+  app.get('/closets', (req, res) => {
+    const { file } = req.query; // Extract file name from query parameters
+    temp_f_name=""
+    if (!file) {
+      return res.status(400).send('File name is required'); // Handle case where file is missing
+    }
+  
+    console.log('File name received:', file); // Log file name received
+  
+    // Example: Check if file exists or handle redirection accordingly
+    // This is just an example, adjust based on your actual logic
+  
+      f_name=file+".json";
+      res.redirect("/")
+    
+  });
+  
   
   //logs out of the application
   app.post('/logout', (req, res) => {
     log.info("logout")
 
         current_user="";
+        f_name="main.json"
   
         res.redirect('/home');
   
   });
 
+  app.get('/delete_closet', (req,res) =>{
+
+    const userDir = path.join(__dirname, 'user_info', current_user);
+
+
+    const filePath = path.join(userDir, f_name);
+
+
+    fs.unlink(filePath, (err) => {
+    if (err) {
+        console.error('Error deleting file:', err);
+        return;
+    }
+    console.log(`Deleted file: ${filePath}`);
+    });
+    f_name="main.json"
+    res.redirect('/');
+
+  });
+
   //logs out from the items page, redirects to home
   app.post('/logout_ofItems', (req, res) => {
+    f_name="main.json"
     log.info("logout")
-    var currentJSON = "user_info/"+current_user+".json";
+    var currentJSON = "user_info/"+current_user+"/pending.json";
 
     try {
         fs.unlinkSync(currentJSON);
@@ -459,19 +653,99 @@ app.get('/add_items_home', (req, res, next) => {
   // Define a route to delete an item
   app.delete('/deleteItem/:index', (req, res) => {
       const index = req.params.index;
-      let name=current_user+".json";
+      let name="/"+current_user+"/"+f_name;
+      console.log("name")
+      console.log(name)
 
       const filePath = path.join(__dirname, 'user_info', name);
       if (index < 0 || index >= req.test.length) {
           return res.status(400).json({ success: false, message: 'Invalid index' });
       }
-      req.test.splice(index, 1);
-      fs.writeFile(filePath, JSON.stringify(req.test, null, 2), 'utf8', (err) => {
+      if(f_name=="main.json"){
+        var ind = (req.test[index][4])
+        req.test.splice(index, 1);
+        fs.writeFile(filePath, JSON.stringify(req.test, null, 2), 'utf8', (err) => {
+            if (err) {
+                return res.status(500).json({ success: false, message: 'Failed to write file' });
+            }
+            res.json({ success: true, test: req.test });
+        });
+        const directoryPath = 'user_info/'+current_user;
+
+        fs.readdir(directoryPath, (err, files) => {
           if (err) {
-              return res.status(500).json({ success: false, message: 'Failed to write file' });
+            console.error('Error reading directory:', err);
+            return;
           }
-          res.json({ success: true, test: req.test });
-      });
+        
+          // Process each file
+          files.forEach(file => {
+            const filePath = path.join(directoryPath, file);
+            fs.readFile(filePath, 'utf8', (err, data) => {
+              if (err) {
+                console.error(`Error reading file ${file}:`, err);
+                return;
+              }
+        
+              // Parse the file content as JSON
+              let content;
+              try {
+                content = JSON.parse(data);
+              } catch (error) {
+                console.error(`Error parsing JSON in file ${file}:`, error);
+                return;
+              }
+        
+              // Check each array in the file content
+              content.forEach((innerArray, index) => {
+                console.log("teree")
+                console.log(innerArray)
+                console.log(ind)
+                if (Array.isArray(innerArray) && innerArray[4] === ind) {
+                  // Remove the matching inner array
+                  content.splice(index, 1);
+                }
+              });
+        
+              // Write the modified content back to the file
+              fs.writeFile(filePath, JSON.stringify(content, null, 2), 'utf8', (err) => {
+                if (err) {
+                  console.error(`Error writing file ${file}:`, err);
+                  return;
+                }
+                console.log(`Successfully modified file ${file}`);
+              });
+            });
+          });
+        });
+    }
+      else{
+        req.test.splice(index, 1);
+        fs.writeFile(filePath, JSON.stringify(req.test, null, 2), 'utf8', (err) => {
+            if (err) {
+                return res.status(500).json({ success: false, message: 'Failed to write file' });
+            }
+            res.json({ success: true, test: req.test });
+        });
+      }
+
+      
+  });
+
+
+  app.get('/get_user_files', (req, res) => {
+    let folderPath = path.join(__dirname, 'user_info', current_user);
+  
+    fs.readdir(folderPath, (err, files) => {
+      if (err) {
+        return res.status(500).send('Unable to scan directory: ' + err);
+      }
+      const filteredFiles = files.filter(file => file !== 'temp.json');
+    
+    // Modify file names as needed (e.g., removing extension `.json`)
+    const modifiedFiles = filteredFiles.map(file => file.slice(0, -5));
+      res.json(modifiedFiles);
+    });
   });
 
 
@@ -762,7 +1036,7 @@ async function email_credentials(code){
   const messages = await gmail.users.messages.list({
     userId: 'me',
     q: 'subject:order OR subject:confirmation OR subject:receipt OR subject:purchase',
-    maxResults: 150
+    maxResults: 10
   });
   const m = messages.data.messages;
   return m;
@@ -796,4 +1070,73 @@ async function unduplicate(subject, sender){
   }
   return {hash,order_num};
 
+}
+
+function getMaxItemCount(userDir, fileName) {
+  const filePath = path.join(userDir, fileName);
+  try {
+      const data = fs.readFileSync(filePath, 'utf8');
+      const mainJson = JSON.parse(data);
+      let maxCount = 0;
+
+      // Iterate through each array in main.json
+      mainJson.forEach(array => {
+          if (Array.isArray(array) && array.length >= 5 && !isNaN(array[4])) {
+              maxCount = Math.max(maxCount, array[4]);
+          }
+      });
+
+      return maxCount;
+  } catch (err) {
+      console.error('Error reading or parsing main.json:', err);
+      return 0; // Default value if there's an error
+  }
+}
+
+function create_temp(){
+  const mainFilePath = 'user_info/'+current_user+'/main.json';
+  const f_nameFilePath = 'user_info/'+current_user+'/'+f_name;
+  const tempFilePath = 'user_info/'+current_user+'/temp.json';
+  console.log("tempy")
+  console.log(mainFilePath)
+  console.log(f_nameFilePath)
+  console.log(tempFilePath)
+  fs.readFile(mainFilePath, 'utf8', (err, mainData) => {
+    if (err) {
+      console.error('Error reading main.json:', err);
+      return;
+    }
+  
+    // Read f_name.json
+    fs.readFile(f_nameFilePath, 'utf8', (err, f_nameData) => {
+      if (err) {
+        console.error('Error reading f_name.json:', err);
+        return;
+      }
+  
+      try {
+        const mainContent = JSON.parse(mainData);
+        const f_nameContent = JSON.parse(f_nameData);
+  
+        // Filter main.json content
+        const tempContent = mainContent.filter(item => {
+          // Assuming each item in main.json has a unique identifier, check if it exists in f_name.json
+          // Modify this condition based on your actual data structure
+          return !f_nameContent.some(f_item => f_item[4] === item[4]);
+        });
+  
+        // Write tempContent to temp.json
+        fs.writeFile(tempFilePath, JSON.stringify(tempContent, null, 2), 'utf8', (err) => {
+          if (err) {
+            console.error('Error writing temp.json:', err);
+            return;
+          }
+          console.log('Successfully created temp.json');
+        });
+  
+      } catch (error) {
+        console.error('Error parsing JSON:', error);
+      }
+    });
+  });
 }
