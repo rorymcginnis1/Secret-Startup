@@ -442,7 +442,7 @@ app.get('/add_items_home', (req, res, next) => {
       console.log('Selected indices:', selectedItems);
   
       // Assuming f_name and current_user are defined elsewhere in your application
-      const mainFilePath = path.join(__dirname, 'user_info', current_user, "main.json");
+      const mainFilePath = path.join(__dirname, 'user_info', current_user, "temp.json");
       let mainData;
       
 
