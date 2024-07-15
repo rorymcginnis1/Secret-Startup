@@ -43,6 +43,7 @@ const openai = require('openai');
 const fs = require('fs');
 const crypto = require('crypto');
 const { info } = require('console');
+const cheerio = require('cheerio');
 
 const { OAuth2 } = google.auth;
 const app = express();
@@ -53,7 +54,7 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const REDIRECT_URI = process.env.REDIRECT_URI;
 
 const oauth2Client = new OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
-var current_user="";
+var current_user="r@t";
 const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly'];
 var body_length=0
 var image_length=0
@@ -72,7 +73,7 @@ remove_file('output.json')
 
 
 fs.writeFileSync("output.json", '', 'utf8');
-log.info('File created successfully');
+//log.info('File created successfully');
 
 // Middleware setup
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -102,43 +103,52 @@ app.get('/oauth2callback', async (req, res) => {
     try {
       remove_file('info.json');
       fs.writeFileSync('info.json', '[]');
-      log.info('info.json created successfully.');
+     // log.info('info.json created successfully.');
       var sha = [];
       var m = await email_credentials(code);
       // for each message loop through
       for (const message of m) {
         //get the message info
         let { messageId, fullMessage, headers, subjectHeader, fromHeader, sender, emailMatch } = await get_message_info(message);
+
         if (emailMatch) {
           sender = emailMatch[1];
         } else {
         sender = sender.split(' ').pop();
         }
         sender = sender.split('@')
-        log.info("Email ID: ", messageId);
+       // log.info("Email ID: ", messageId);
         body_length = 0;
         image_length=0;
         if (subjectHeader) {
             const isReceipt = await confirmReceipt(subjectHeader.value);
-            log.info(subjectHeader.value);
-            log.info("Is this a receipt? ", isReceipt);
+            console.log(subjectHeader.value)
+           // log.info(subjectHeader.value);
+           // log.info("Is this a receipt? ", isReceipt);
             //if it is a receipt continue
+            console.log(isReceipt)
             if (isReceipt) {
+              //const info = await getEmailTextContent(fullMessage.data.payload)
+              //console.log(info)
+
+              //console.log(subjectHeader.value)
               //limits duplicate entries
               var {hash, order_num} = await unduplicate(subjectHeader.value, sender)
               if(!(sha.includes(hash) )){
                 if(order_num!=-1){
                   sha.push(hash)
                 }
-
+                const testy = extractAndProcessHTML(fullMessage.data.payload.parts)
               const body = getBody(fullMessage.data.payload);
-              log.info('Subject:', subjectHeader.value);
-              log.info('Body Character Count:', body_length);
+              //log.info('Subject:', subjectHeader.value);
+              //log.info('Body Character Count:', body_length);
               
-              if(body_length >=1 && image_length>=1){
-                await extractReceiptData(body);
+              if(body_length >=0 && image_length>=-1){
+                console.log("yes")
+                await extractReceiptData(testy);
               }
               else{
+                console.log("negatively")
                 sha = sha.filter(item => item !== hash);
               }
           }}
@@ -179,12 +189,12 @@ app.get('/home', (req, res) => {
     const filePath = path.join(userDir, `${closetName}.json`);
   
     // Example: Save closetName to a JSON file
-    console.log('Adding new closet:', closetName);
-    console.log('Current User:', currentUser);
+    //console.log('Adding new closet:', closetName);
+    //console.log('Current User:', currentUser);
   
   
     fs.writeFileSync(filePath, '[]');
-    console.log(`Created new closet file: ${filePath}`);
+    //console.log(`Created new closet file: ${filePath}`);
   
     // Redirect to the index page after processing
     res.redirect('/'); // Assuming 'index' is the route or file you want to redirect to
@@ -228,7 +238,7 @@ app.post('/createUser', (req, res) => {
 
       creds.push({ email, password });
       let name = email;
-      log.info(name)
+      //log.info(name)
       //good
       let folderPath = "user_info/"+name;
       if (!fs.existsSync(folderPath)) {
@@ -240,7 +250,7 @@ app.post('/createUser', (req, res) => {
           fs.writeFileSync(filePath, '[]');
           filePath = path.join(folderPath, 'for sale.json');
           fs.writeFileSync(filePath, '[]');
-          log.info(name, ' created successfully.');
+          //log.info(name, ' created successfully.');
         } catch (error) {
           console.error('Error creating ', name, " ", error);
           return;
@@ -307,7 +317,7 @@ app.use((req, res, next) => {
   let userDir = path.join(__dirname, 'user_info', current_user);
   let filePath = path.join(userDir, name);
 
-  log.info(filePath);
+  //log.info(filePath);
 
       fs.readFile(filePath, 'utf8', (err, data) => {
         if (err) {
@@ -322,8 +332,8 @@ app.use((req, res, next) => {
 
 // renders the home page
 app.get('/', (req, res) => {
-  console.log(f_name)
-  console.log(temp_f_name)
+  //console.log(f_name)
+  //console.log(temp_f_name)
     if(f_name=="main.json" && temp_f_name!=""){
       res.render('add_closet', { test: req.test });
     }
@@ -373,8 +383,8 @@ app.get('/add_items_home', (req, res, next) => {
 
 
     //maybe
-    log.info("line");
-    log.info(current_user)
+    //log.info("line");
+    //log.info(current_user)
 
     let actualPath = "/"+current_user+"/main.json"
     let pendingPath = "/"+current_user+"/pending.json"
@@ -416,8 +426,8 @@ app.get('/add_items_home', (req, res, next) => {
   //renders your home page from the populating page
     app.get('/go', (req, res) => {
       f_name="main.json"
-      log.info("here")
-      log.info(current_user)
+      //log.info("here")
+      //log.info(current_user)
       //good
         var currentJSON = "user_info/"+current_user+"/pending.json";
 
@@ -429,7 +439,7 @@ app.get('/add_items_home', (req, res, next) => {
         }
 
 
-        log.info(current_user)
+        //log.info(current_user)
 
         res.redirect('/');
     });
@@ -439,7 +449,7 @@ app.get('/add_items_home', (req, res, next) => {
       f_name = temp_f_name;
       temp_f_name = "";
   
-      console.log('Selected indices:', selectedItems);
+      //console.log('Selected indices:', selectedItems);
   
       // Assuming f_name and current_user are defined elsewhere in your application
       const mainFilePath = path.join(__dirname, 'user_info', current_user, "temp.json");
@@ -449,14 +459,14 @@ app.get('/add_items_home', (req, res, next) => {
       try {
           const data = fs.readFileSync(mainFilePath, 'utf8');
           mainData = JSON.parse(data);
-          console.log("mainer");
-          console.log(mainData);
+         //console.log("mainer");
+         // console.log(mainData);
       } catch (err) {
           console.error('Error reading or parsing main.json:', err);
           return res.status(500).json({ success: false, message: 'Failed to read or parse main.json' });
       }
-      console.log("mainer")
-      console.log(mainData)
+      //console.log("mainer")
+      //console.log(mainData)
   
           // Filter selected items based on indices
           const itemsToAdd = selectedItems.map(index => mainData[index]);
@@ -483,8 +493,8 @@ app.get('/add_items_home', (req, res, next) => {
               itemsToAdd.forEach(item => {
                   f_nameData.push(item);
               });
-              console.log("items")
-              console.log(f_nameData)
+              //console.log("items")
+              //console.log(f_nameData)
   
               // Write updated data back to f_name
               fs.writeFile(f_nameFilePath, JSON.stringify(f_nameData, null, 2), 'utf8', (err) => {
@@ -492,7 +502,7 @@ app.get('/add_items_home', (req, res, next) => {
                       console.error('Error writing to f_name:', err);
                       return res.status(500).json({ success: false, message: 'Failed to write to f_name' });
                   }
-                  console.log('Selected items added to f_name');
+                  //console.log('Selected items added to f_name');
                   res.redirect('/');
               });
           });
@@ -507,7 +517,7 @@ app.get('/add_items_home', (req, res, next) => {
         //maybe
         let name="/"+current_user+"/pending.json";
         const fPath = path.join(__dirname, 'sample.json');
-        log.info("P")
+        //log.info("P")
         fs.readFile('sample.json', (err, data) => {
           if (err) {
               console.error('Error reading sample.json:', err);
@@ -559,13 +569,13 @@ app.get('/for_sale', (req, res, next) => {
 
     //good
     f_name = "pending.json"
-    console.log("pending")
-    console.log(f_name)
+    //console.log("pending")
+    //console.log(f_name)
     let name = "pending.json";
     let userDir = path.join(__dirname, 'user_info', current_user);
     let filePath = path.join(userDir, name);
   
-    log.info(filePath);
+    //log.info(filePath);
 
     fs.readFile(filePath, 'utf8', (err, data) => {
         if (err) {
@@ -589,7 +599,7 @@ app.get('/for_sale', (req, res, next) => {
       return res.status(400).send('File name is required'); // Handle case where file is missing
     }
   
-    console.log('File name received:', file); // Log file name received
+    //console.log('File name received:', file); // Log file name received
   
     // Example: Check if file exists or handle redirection accordingly
     // This is just an example, adjust based on your actual logic
@@ -602,7 +612,7 @@ app.get('/for_sale', (req, res, next) => {
   
   //logs out of the application
   app.post('/logout', (req, res) => {
-    log.info("logout")
+    //log.info("logout")
 
         current_user="";
         f_name="main.json"
@@ -624,7 +634,7 @@ app.get('/for_sale', (req, res, next) => {
         console.error('Error deleting file:', err);
         return;
     }
-    console.log(`Deleted file: ${filePath}`);
+    //console.log(`Deleted file: ${filePath}`);
     });
     f_name="main.json"
     res.redirect('/');
@@ -634,12 +644,12 @@ app.get('/for_sale', (req, res, next) => {
   //logs out from the items page, redirects to home
   app.post('/logout_ofItems', (req, res) => {
     f_name="main.json"
-    log.info("logout")
+    //log.info("logout")
     var currentJSON = "user_info/"+current_user+"/pending.json";
 
     try {
         fs.unlinkSync(currentJSON);
-        log.info('info.json deleted successfully.');
+       // log.info('info.json deleted successfully.');
     } catch (error) {
     console.error('Error deleting info.json:', error);
     }
@@ -654,8 +664,8 @@ app.get('/for_sale', (req, res, next) => {
   app.delete('/deleteItem/:index', (req, res) => {
       const index = req.params.index;
       let name="/"+current_user+"/"+f_name;
-      console.log("name")
-      console.log(name)
+     // console.log("name")
+      //console.log(name)
 
       const filePath = path.join(__dirname, 'user_info', name);
       if (index < 0 || index >= req.test.length) {
@@ -698,9 +708,9 @@ app.get('/for_sale', (req, res, next) => {
         
               // Check each array in the file content
               content.forEach((innerArray, index) => {
-                console.log("teree")
-                console.log(innerArray)
-                console.log(ind)
+                //console.log("teree")
+                //console.log(innerArray)
+                //console.log(ind)
                 if (Array.isArray(innerArray) && innerArray[4] === ind) {
                   // Remove the matching inner array
                   content.splice(index, 1);
@@ -713,7 +723,7 @@ app.get('/for_sale', (req, res, next) => {
                   console.error(`Error writing file ${file}:`, err);
                   return;
                 }
-                console.log(`Successfully modified file ${file}`);
+                //console.log(`Successfully modified file ${file}`);
               });
             });
           });
@@ -750,7 +760,7 @@ app.get('/for_sale', (req, res, next) => {
 
 
 app.listen(port, () => {
-  log.info(`Server running at http://localhost:${port}`);
+  //log.info(`Server running at http://localhost:${port}`);
 });
 
 
@@ -813,7 +823,7 @@ How does is treat code outside of functions? */
 
 //Ask ChatGPT if the email is a receipt or not.
 async function confirmReceipt(subject) {
-  log.info("confirmReceipt")
+  //log.info("confirmReceipt")
   //prompt
   const str = `Do you think this is a receipt or order confirmation for something that 
   has been purchased? Answer only with the word yes or no in lower case with no punctuation. Exclude subscriptions.\n`+subject
@@ -829,7 +839,7 @@ async function confirmReceipt(subject) {
 
 //Extract the receipt data via ChatGPT and put the result into an array.
 async function extractReceiptData(text_body) {
-  log.info("extractReceiptData")
+  //log.info("extractReceiptData")
   //prompt
   const prompt =`based on this code can you tell me what was bought, the full price of the individual item(discounts should not be included), how many of each item were purchased and provide the image for each item?
   can you put it in an array so that I can use it in html
@@ -843,7 +853,7 @@ async function extractReceiptData(text_body) {
   if there is no info please return an empty array\n\n`+text_body; 
   const information = await promptOpenAI(prompt)
 
-  log.info(information);
+  //log.info(information);
 
   addToJSON(information);
 
@@ -853,7 +863,7 @@ async function extractReceiptData(text_body) {
 
 // Function to prompt OpenAI and get result
 async function promptOpenAI(prompt) {
-  log.info("promptOpenAI")
+  //log.info("promptOpenAI")
   try {
       const response = await fetch(endpointUrl, {
           method: 'POST',
@@ -878,7 +888,7 @@ async function promptOpenAI(prompt) {
           throw new Error(`Failed to fetch response from OpenAI API. HTTP status: ${response.status}, Error: ${JSON.stringify(errorDetails)}`);
       }
       const data = await response.json();
-      log.info('API response:'+ data.choices[0].message.content.trim());
+      //log.info('API response:'+ data.choices[0].message.content.trim());
       const responseString = data.choices[0].message.content.trim();
       // The processing of the responseString is omitted here as it is not used in the main logic
       return responseString;
@@ -903,7 +913,7 @@ function addToJSON(data) {
   if (!fs.existsSync('info.json')) {
       try {
           fs.writeFileSync('info.json', '[]');
-          log.info('info.json created successfully.');
+         // log.info('info.json created successfully.');
       } catch (error) {
           console.error('Error creating info.json:', error);
           return;
@@ -922,7 +932,7 @@ function addToJSON(data) {
   try {
       fs.unlinkSync('info.json');
       fs.writeFileSync('info.json', JSON.stringify(existingData, null, 2));
-      log.info("Data appended to info.json successfully.\n\n\n\n");
+      //log.info("Data appended to info.json successfully.\n\n\n\n");
   } catch (error) {
       console.error('Error writing to info.json:', error);
   }
@@ -950,14 +960,14 @@ async function get_info_array() {
         try {
           // calling the prompt into the openAIprompt
           var chat = await promptOpenAI(chatGPT_array);
-          log.info(chat);
+          //log.info(chat);
           const outputFilePath = path.join(__dirname, 'sample.json');
           fs.writeFile(outputFilePath, chat, 'utf8', (err) => {
             if (err) {
               console.error(`Error writing file: ${err}`);
               return reject(err); 
             }
-            log.info('Chat response has been written to sample.json');
+            //log.info('Chat response has been written to sample.json');
             resolve(); 
           });
         } catch (error) {
@@ -1005,9 +1015,9 @@ function getBody(payload) {
 function remove_file(file_name){
   if (fs.existsSync(file_name)) {
     fs.unlinkSync(file_name);
-    log.info(file_name,' deleted successfully.');
+   // log.info(file_name,' deleted successfully.');
   } else {
-    log.info('File does not exist');
+    //log.info('File does not exist');
   }
 
 
@@ -1023,20 +1033,20 @@ async function find_order_num(subject) {
 async function email_credentials(code){
   const { tokens } = await oauth2Client.getToken(code);
   oauth2Client.setCredentials(tokens);
-  log.info('Access tokens: ', tokens)
+ // log.info('Access tokens: ', tokens)
 
 
 
   const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
   const profile = await gmail.users.getProfile({ userId: 'me' });
 
-  log.info('User Profile: ', profile.data);
+ // log.info('User Profile: ', profile.data);
 
 
   const messages = await gmail.users.messages.list({
     userId: 'me',
     q: 'subject:order OR subject:confirmation OR subject:receipt OR subject:purchase',
-    maxResults: 10
+    maxResults: 5
   });
   const m = messages.data.messages;
   return m;
@@ -1097,10 +1107,10 @@ function create_temp(){
   const mainFilePath = 'user_info/'+current_user+'/main.json';
   const f_nameFilePath = 'user_info/'+current_user+'/'+f_name;
   const tempFilePath = 'user_info/'+current_user+'/temp.json';
-  console.log("tempy")
-  console.log(mainFilePath)
-  console.log(f_nameFilePath)
-  console.log(tempFilePath)
+ // console.log("tempy")
+  //console.log(mainFilePath)
+  //console.log(f_nameFilePath)
+  //console.log(tempFilePath)
   fs.readFile(mainFilePath, 'utf8', (err, mainData) => {
     if (err) {
       console.error('Error reading main.json:', err);
@@ -1131,7 +1141,7 @@ function create_temp(){
             console.error('Error writing temp.json:', err);
             return;
           }
-          console.log('Successfully created temp.json');
+          //console.log('Successfully created temp.json');
         });
   
       } catch (error) {
@@ -1140,3 +1150,230 @@ function create_temp(){
     });
   });
 }
+
+
+function testgetBody(payload) {
+  let body = '';
+  
+  if (payload.parts) {
+      for (let part of payload.parts) {
+          if (part.mimeType === 'text/plain' && part.body.data) {
+              body += Buffer.from(part.body.data, 'base64').toString('utf-8');
+          } else if (part.mimeType === 'text/html' && part.body.data) {
+              body += Buffer.from(part.body.data, 'base64').toString('utf-8');
+          } else if (part.parts) {
+              body += getBody(part);
+          }
+      }
+  } else if (payload.body.data) {
+      body = Buffer.from(payload.body.data, 'base64').toString('utf-8');
+  }
+  
+   console.log(body);
+}
+
+async function getMessageInfo(message) {
+  const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+
+  const messageId = message.id;
+  const fullMessage = await gmail.users.messages.get({ userId: 'me', id: messageId });
+  const headers = fullMessage.data.payload.headers;
+  const subjectHeader = headers.find(header => header.name === 'Subject');
+  const fromHeader = headers.find(header => header.name === 'From');
+  let sender = fromHeader ? fromHeader.value : 'Unknown sender';
+  const emailMatch = sender.match(/<([^>]+)>/);
+
+  // Function to decode base64url encoded data
+  const decodeBase64Url = (data) => {
+      return Buffer.from(data, 'base64').toString('utf-8');
+  };
+
+  // Extract and decode the HTML or plain text body
+  let emailTextContent = '';
+  const parts = fullMessage.data.payload.parts || [];
+
+  for (let part of parts) {
+      if (part.mimeType === 'text/html') {
+          emailTextContent = decodeBase64Url(part.body.data);
+          break;
+      } else if (part.mimeType === 'text/plain') {
+          emailTextContent = decodeBase64Url(part.body.data);
+      } else if (part.mimeType === 'multipart/alternative') {
+          for (let subPart of part.parts) {
+              if (subPart.mimeType === 'text/html') {
+                  emailTextContent = decodeBase64Url(subPart.body.data);
+                  break;
+              } else if (subPart.mimeType === 'text/plain') {
+                  emailTextContent = decodeBase64Url(subPart.body.data);
+              }
+          }
+      }
+  }
+
+  if (parts.length === 0 && fullMessage.data.payload.body.data) {
+      // If there are no parts, check the main body
+      emailTextContent = decodeBase64Url(fullMessage.data.payload.body.data);
+  }
+
+  if (fullMessage.data.payload.mimeType === 'text/html') {
+      const $ = cheerio.load(emailTextContent);
+      emailTextContent = $('body').text();
+  }
+
+  return {emailTextContent };
+}
+async function getEmailTextContent(payload) {
+  try {
+    const decodeBase64Url = (data) => {
+      return Buffer.from(data, 'base64').toString('utf-8');
+    };
+
+    const getTextContent = (parts) => {
+      for (const part of parts) {
+        //console.log('Processing part:', part);
+        if (part.mimeType === 'text/plain') {
+          return decodeBase64Url(part.body.data || '');
+        }
+        if (part.parts && part.parts.length) {
+          const text = getTextContent(part.parts);
+          if (text) return text;
+        }
+      }
+      return '';
+    };
+
+    let emailTextContent = '';
+
+    //const html_content = processParts(payload.parts);
+    extractAndProcessHTML(payload.parts)
+
+    if (payload && payload.mimeType === 'text/plain') {
+      emailTextContent = decodeBase64Url(payload.body.data || '');
+    } else if (payload && (payload.mimeType === 'multipart/alternative' || payload.mimeType === 'multipart/mixed')) {
+      emailTextContent = getTextContent(payload.parts);
+    }
+
+    //console.log('Email Text Content:', emailTextContent);
+    //processPayload(payload)
+    return emailTextContent;
+  } catch (error) {
+    console.error('Error in getEmailTextContent:', error);
+    throw error;
+  }
+}
+
+
+function decodeBase64Url(data) {
+  const buff = Buffer.from(data, 'base64');
+  return buff.toString('utf-8');
+}
+function processMixedParts(parts) {
+  parts.forEach((part, index) => {
+      console.log(`Processing mixed part ${index}:`, part);
+
+      switch (part.mimeType) {
+          case 'multipart/alternative':
+              // If the part is multipart/alternative, process its parts recursively
+              processAlternativeParts(part.parts);
+              break;
+          case 'text/plain':
+              // Process plain text content
+              console.log('Plain Text Content:', part.body.data.toString('utf-8'));
+              break;
+          case 'text/html':
+              // Process HTML content
+              console.log('HTML Content:', part.body.data.toString('utf-8'));
+              break;
+          case 'image/jpeg':
+          case 'image/png':
+              // Process image attachments
+              console.log(`Image Attachment (${part.mimeType}):`, part.body.data);
+              // Save or process the image data as needed
+              break;
+          case 'application/pdf':
+              // Process PDF attachments
+              console.log(`PDF Attachment (${part.filename}):`, part.body.data);
+              // Save or process the PDF data as needed
+              break;
+          default:
+              console.log(`Unhandled MIME type (${part.mimeType})`);
+              break;
+      }
+  });
+}
+
+function processAlternativeParts(parts) {
+  parts.forEach((part) => {
+      switch (part.mimeType) {
+          case 'text/plain':
+              // Process plain text content
+              console.log('Plain Text Content:', part.body.data.toString('utf-8'));
+              break;
+          case 'text/html':
+              // Process HTML content
+              console.log('HTML Content:', part.body.data.toString('utf-8'));
+              break;
+          default:
+              console.log(`Unhandled MIME type (${part.mimeType})`);
+              break;
+      }
+  });
+}
+
+function processPayload(payload) {
+  switch (payload.mimeType) {
+      case 'multipart/mixed':
+          // Process each part in the multipart/mixed
+          processMixedParts(payload.parts);
+          break;
+      case 'multipart/alternative':
+          // Process each part in the multipart/alternative
+          processAlternativeParts(payload.parts);
+          break;
+      default:
+          console.log(`Unhandled MIME type (${payload.mimeType})`);
+          break;
+  }
+
+}
+
+function processParts(parts) {
+  let htmlContent = ''; // Variable to store decoded HTML content
+
+  parts.forEach(part => {
+    if (part.mimeType === 'text/html') {
+      const rawBody = part.body.data;
+      const decodedBody = Buffer.from(rawBody, 'base64').toString('utf-8');
+      htmlContent += decodedBody; // Concatenate HTML content
+    } else if (part.mimeType === 'multipart/mixed') {
+      // Recursively process parts of nested multipart/mixed content
+      htmlContent += processParts(part.parts); // Concatenate HTML content recursively
+    } else {
+      // Handle other types of content as needed
+      console.log('Skipping part with mimeType:', part.mimeType);
+    }
+  });
+
+  return htmlContent; // Return concatenated HTML content
+}
+
+function extractAndProcessHTML(parts) {
+  const htmlContent = processParts(parts);
+
+  const $ = cheerio.load(htmlContent);
+  const allText = $('body').text().trim();
+  let imgTagsLog = '';
+  $('img').each((index, element) => {
+    imgTagsLog += $.html(element); // Append the HTML of each <img> element
+  });
+  
+
+
+  console.log('Order Details:');
+  //console.log(htmlContent)
+  console.log(allText);
+  console.log(imgTagsLog);
+
+  return allText+"\n\n"+imgTagsLog; // Optionally return the extracted details
+}
+
