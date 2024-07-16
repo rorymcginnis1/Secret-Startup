@@ -122,33 +122,39 @@ app.get('/oauth2callback', async (req, res) => {
         image_length=0;
         if (subjectHeader) {
             const isReceipt = await confirmReceipt(subjectHeader.value);
-            console.log(subjectHeader.value)
+            //console.log(subjectHeader.value)
            // log.info(subjectHeader.value);
            // log.info("Is this a receipt? ", isReceipt);
             //if it is a receipt continue
-            console.log(isReceipt)
+           // console.log(isReceipt)
             if (isReceipt) {
               //const info = await getEmailTextContent(fullMessage.data.payload)
               //console.log(info)
 
               //console.log(subjectHeader.value)
               //limits duplicate entries
-              var {hash, order_num} = await unduplicate(subjectHeader.value, sender)
-              if(!(sha.includes(hash) )){
+              var {hash, order_num} = await unduplicate(subjectHeader.value, sender[1])
+
+              var dataHash = "gmail.com" + order_num;
+              if (!(sha.includes(hash)|| sha.includes(crypto.createHash('sha256').update(dataHash).digest('hex')))) {
                 if(order_num!=-1){
                   sha.push(hash)
+                  
+
+                  sha.push(crypto.createHash('sha256').update(dataHash).digest('hex'));
+    
                 }
-                const testy = extractAndProcessHTML(fullMessage.data.payload.parts)
+              const testy = extractAndProcessHTML(fullMessage.data.payload)
               const body = getBody(fullMessage.data.payload);
               //log.info('Subject:', subjectHeader.value);
               //log.info('Body Character Count:', body_length);
               
               if(body_length >=0 && image_length>=-1){
-                console.log("yes")
+                //console.log("yes")
                 await extractReceiptData(testy);
               }
               else{
-                console.log("negatively")
+                //console.log("negatively")
                 sha = sha.filter(item => item !== hash);
               }
           }}
@@ -852,11 +858,14 @@ async function extractReceiptData(text_body) {
   Please do not have any other text display only the array
   if there is no info please return an empty array\n\n`+text_body; 
   const information = await promptOpenAI(prompt)
-
+  //console.log("the information")
+  //console.log(prompt)
+  //console.log("result")
+  //console.log(information)
   //log.info(information);
 
   addToJSON(information);
-
+  
  }
 
 
@@ -938,6 +947,18 @@ function addToJSON(data) {
   }
 }
 
+function chunkArray(array, chunkSize) {
+  const chunks = [];
+  for (let i = 0; i < array.length; i += chunkSize) {
+    if (array.length - i < 2*chunkSize) {
+      chunks.push(array.slice(i)); // Add remaining elements to last chunk
+      break; // Exit loop as no further chunks are needed
+    } else {
+      chunks.push(array.slice(i, i + chunkSize));
+    }
+  }
+  return chunks;
+}
 
 // function to have chatGPT parse the info.json into usable data
 async function get_info_array() {
@@ -956,13 +977,51 @@ async function get_info_array() {
           console.error(`Error reading file: ${err}`);
           return reject(err); 
         }
-        chatGPT_array += data.toString();
+        //chatGPT_array += data.toString();
         try {
+          const jsonArray = JSON.parse(data.toString());
+          const chunks = chunkArray(jsonArray, 4);
+      
+          const temp = [];
+          var ind=0
+          for (const chunk of chunks) {
+            ind+=1;
+            const temp_ChatGPT = chatGPT_array + JSON.stringify(chunk);
+
+            const chat = await promptOpenAI(temp_ChatGPT);
+            //console.log("chatas")
+           // console.log(chat)
+            temp.push(chat);
+          }
+          var pushes="";
+          for (let i = 0; i < temp.length; i++) {
+
+            if(temp.length==1){
+              pushes=temp[i]
+            }
+            else if (i==0){
+              pushes += temp[i].slice(0, -1);
+              pushes+=","
+            }
+            else if(i==temp.length-1){
+              pushes += temp[i].substring(1);
+            }
+            else{
+              pushes += temp[i].substring(1, temp[i].length - 1);
+              pushes+=","
+            }
+          }
+          //console.log("puish")
+          //console.log(pushes)
+          //console.log("temp")
+          //console.log(temp)
+         // console.log("0")
+          //console.log(pushes)
           // calling the prompt into the openAIprompt
-          var chat = await promptOpenAI(chatGPT_array);
+          //var chat = await promptOpenAI(chatGPT_array);
           //log.info(chat);
           const outputFilePath = path.join(__dirname, 'sample.json');
-          fs.writeFile(outputFilePath, chat, 'utf8', (err) => {
+          fs.writeFile(outputFilePath, pushes, 'utf8', (err) => {
             if (err) {
               console.error(`Error writing file: ${err}`);
               return reject(err); 
@@ -1046,7 +1105,7 @@ async function email_credentials(code){
   const messages = await gmail.users.messages.list({
     userId: 'me',
     q: 'subject:order OR subject:confirmation OR subject:receipt OR subject:purchase',
-    maxResults: 5
+    maxResults: 50
   });
   const m = messages.data.messages;
   return m;
@@ -1073,7 +1132,7 @@ async function unduplicate(subject, sender){
 
   if (order_num != -1){
 
-    const dataToHash = sender[1] + order_num;
+    const dataToHash = sender + order_num;
 
     hash = crypto.createHash('sha256').update(dataToHash).digest('hex');
     
@@ -1169,7 +1228,7 @@ function testgetBody(payload) {
       body = Buffer.from(payload.body.data, 'base64').toString('utf-8');
   }
   
-   console.log(body);
+   //console.log(body);
 }
 
 async function getMessageInfo(message) {
@@ -1269,7 +1328,7 @@ function decodeBase64Url(data) {
 }
 function processMixedParts(parts) {
   parts.forEach((part, index) => {
-      console.log(`Processing mixed part ${index}:`, part);
+      //console.log(`Processing mixed part ${index}:`, part);
 
       switch (part.mimeType) {
           case 'multipart/alternative':
@@ -1278,25 +1337,25 @@ function processMixedParts(parts) {
               break;
           case 'text/plain':
               // Process plain text content
-              console.log('Plain Text Content:', part.body.data.toString('utf-8'));
+              //console.log('Plain Text Content:', part.body.data.toString('utf-8'));
               break;
           case 'text/html':
               // Process HTML content
-              console.log('HTML Content:', part.body.data.toString('utf-8'));
+             // console.log('HTML Content:', part.body.data.toString('utf-8'));
               break;
           case 'image/jpeg':
           case 'image/png':
               // Process image attachments
-              console.log(`Image Attachment (${part.mimeType}):`, part.body.data);
+             // console.log(`Image Attachment (${part.mimeType}):`, part.body.data);
               // Save or process the image data as needed
               break;
           case 'application/pdf':
               // Process PDF attachments
-              console.log(`PDF Attachment (${part.filename}):`, part.body.data);
+              ///console.log(`PDF Attachment (${part.filename}):`, part.body.data);
               // Save or process the PDF data as needed
               break;
           default:
-              console.log(`Unhandled MIME type (${part.mimeType})`);
+             // console.log(`Unhandled MIME type (${part.mimeType})`);
               break;
       }
   });
@@ -1307,14 +1366,14 @@ function processAlternativeParts(parts) {
       switch (part.mimeType) {
           case 'text/plain':
               // Process plain text content
-              console.log('Plain Text Content:', part.body.data.toString('utf-8'));
+             // console.log('Plain Text Content:', part.body.data.toString('utf-8'));
               break;
           case 'text/html':
               // Process HTML content
-              console.log('HTML Content:', part.body.data.toString('utf-8'));
+              //console.log('HTML Content:', part.body.data.toString('utf-8'));
               break;
           default:
-              console.log(`Unhandled MIME type (${part.mimeType})`);
+             // console.log(`Unhandled MIME type (${part.mimeType})`);
               break;
       }
   });
@@ -1331,34 +1390,62 @@ function processPayload(payload) {
           processAlternativeParts(payload.parts);
           break;
       default:
-          console.log(`Unhandled MIME type (${payload.mimeType})`);
+         // console.log(`Unhandled MIME type (${payload.mimeType})`);
           break;
   }
 
+}
+
+function otherPayload(payload){
+  let htmlContent = '';
+  const parts = payload.parts
+  if (!Array.isArray(parts)) {
+    if (payload.mimeType === 'text/html'|| payload.mimeType === 'text/plain') {
+      const rawBody = payload.body.data;
+      const decodedBody = Buffer.from(rawBody, 'base64').toString('utf-8');
+      htmlContent += decodedBody; // Concatenate HTML content
+    } else if (payload.mimeType === 'multipart/mixed'|| payload.mimeType === 'multipart/alternative') {
+      // Recursively process parts of nested multipart/mixed content
+      htmlContent += processParts(payload.parts); // Concatenate HTML content recursively
+    } else {
+      // Handle other types of content as needed
+     // console.log("not reading ",payload.mimeType)
+    }
+    return htmlContent
+  }
 }
 
 function processParts(parts) {
   let htmlContent = ''; // Variable to store decoded HTML content
 
   parts.forEach(part => {
-    if (part.mimeType === 'text/html') {
+    if (part.mimeType === 'text/html'|| part.mimeType === 'text/plain') {
       const rawBody = part.body.data;
       const decodedBody = Buffer.from(rawBody, 'base64').toString('utf-8');
       htmlContent += decodedBody; // Concatenate HTML content
-    } else if (part.mimeType === 'multipart/mixed') {
+    } else if (part.mimeType === 'multipart/mixed'|| part.mimeType === 'multipart/alternative') {
       // Recursively process parts of nested multipart/mixed content
       htmlContent += processParts(part.parts); // Concatenate HTML content recursively
     } else {
       // Handle other types of content as needed
-      console.log('Skipping part with mimeType:', part.mimeType);
+     // console.log("not reading ",part.mimeType)
     }
   });
 
   return htmlContent; // Return concatenated HTML content
 }
 
-function extractAndProcessHTML(parts) {
-  const htmlContent = processParts(parts);
+function extractAndProcessHTML(payload) {
+  var parts = payload.parts
+  var htmlContent;
+  if (!Array.isArray(parts)) {
+    //console.log(payload)
+    htmlContent = otherPayload(payload)
+  }
+  else{
+
+    htmlContent = processParts(payload.parts);
+  }
 
   const $ = cheerio.load(htmlContent);
   const allText = $('body').text().trim();
@@ -1369,10 +1456,10 @@ function extractAndProcessHTML(parts) {
   
 
 
-  console.log('Order Details:');
+  //console.log('Order Details:');
   //console.log(htmlContent)
-  console.log(allText);
-  console.log(imgTagsLog);
+ // console.log(allText);
+  //console.log(imgTagsLog);
 
   return allText+"\n\n"+imgTagsLog; // Optionally return the extracted details
 }
